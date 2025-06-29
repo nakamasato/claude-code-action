@@ -17,7 +17,7 @@ import { prepareMcpConfig } from "../mcp/install-mcp-server";
 import { createPrompt } from "../create-prompt";
 import { createOctokit } from "../github/api/client";
 import { fetchGitHubData } from "../github/data/fetcher";
-import { parseGitHubContext } from "../github/context";
+import { parseGitHubContext, isWorkflowRunEvent } from "../github/context";
 
 async function run() {
   try {
@@ -60,6 +60,7 @@ async function run() {
       prNumber: context.entityNumber.toString(),
       isPR: context.isPR,
       triggerUsername: context.actor,
+      isWorkflowRun: isWorkflowRunEvent(context),
     });
 
     // Step 8: Setup branch

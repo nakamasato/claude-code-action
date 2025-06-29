@@ -19,6 +19,7 @@ type FetchDataParams = {
   prNumber: string;
   isPR: boolean;
   triggerUsername?: string;
+  isWorkflowRun?: boolean;
 };
 
 export type GitHubFileWithSHA = GitHubFile & {
@@ -41,10 +42,42 @@ export async function fetchGitHubData({
   prNumber,
   isPR,
   triggerUsername,
+  isWorkflowRun = false,
 }: FetchDataParams): Promise<FetchDataResult> {
   const [owner, repo] = repository.split("/");
   if (!owner || !repo) {
     throw new Error("Invalid repository format. Expected 'owner/repo'.");
+  }
+
+  // For workflow_run events, return minimal data since there's no associated issue/PR
+  if (isWorkflowRun) {
+    console.log("Skipping GitHub data fetch for workflow_run event");
+
+    // Fetch trigger user display name if username is provided
+    let triggerDisplayName: string | null | undefined;
+    if (triggerUsername) {
+      triggerDisplayName = await fetchUserDisplayName(
+        octokits,
+        triggerUsername,
+      );
+    }
+
+    return {
+      contextData: {
+        title: "Workflow Run",
+        body: "Triggered by workflow_run event",
+        author: { login: triggerUsername || "unknown" },
+        createdAt: new Date().toISOString(),
+        state: "OPEN",
+        comments: { nodes: [] },
+      } as GitHubIssue,
+      comments: [],
+      changedFiles: [],
+      changedFilesWithSHA: [],
+      reviewData: null,
+      imageUrlMap: new Map(),
+      triggerDisplayName,
+    };
   }
 
   let contextData: GitHubPullRequest | GitHubIssue | null = null;

@@ -9,6 +9,7 @@
 import { $ } from "bun";
 import * as core from "@actions/core";
 import type { ParsedGitHubContext } from "../context";
+import { isWorkflowRunEvent } from "../context";
 import type { GitHubPullRequest } from "../types";
 import type { Octokits } from "../api/client";
 import type { FetchDataResult } from "../data/fetcher";
@@ -28,6 +29,36 @@ export async function setupBranch(
   const entityNumber = context.entityNumber;
   const { baseBranch, branchPrefix } = context.inputs;
   const isPR = context.isPR;
+
+  // For workflow_run events, stay on current branch and don't create new ones
+  if (isWorkflowRunEvent(context)) {
+    console.log("Workflow run event detected, staying on current branch");
+
+    // Get current branch name
+    const currentBranchResult = await $`git branch --show-current`.text();
+    const currentBranch = currentBranchResult.trim();
+
+    // Determine base branch - use baseBranch if provided, otherwise get default
+    let defaultBranch: string;
+    if (baseBranch) {
+      defaultBranch = baseBranch;
+    } else {
+      const repoResponse = await octokits.rest.repos.get({
+        owner,
+        repo,
+      });
+      defaultBranch = repoResponse.data.default_branch;
+    }
+
+    console.log(
+      `Current branch: ${currentBranch}, base branch: ${defaultBranch}`,
+    );
+
+    return {
+      baseBranch: defaultBranch,
+      currentBranch,
+    };
+  }
 
   if (isPR) {
     const prData = githubData.contextData as GitHubPullRequest;
