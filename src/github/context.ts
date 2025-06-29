@@ -6,6 +6,7 @@ import type {
   PullRequestEvent,
   PullRequestReviewEvent,
   PullRequestReviewCommentEvent,
+  WorkflowRunEvent,
 } from "@octokit/webhooks-types";
 
 export type ParsedGitHubContext = {
@@ -23,7 +24,8 @@ export type ParsedGitHubContext = {
     | IssueCommentEvent
     | PullRequestEvent
     | PullRequestReviewEvent
-    | PullRequestReviewCommentEvent;
+    | PullRequestReviewCommentEvent
+    | WorkflowRunEvent;
   entityNumber: number;
   isPR: boolean;
   inputs: {
@@ -110,6 +112,14 @@ export function parseGitHubContext(): ParsedGitHubContext {
         isPR: true,
       };
     }
+    case "workflow_run": {
+      return {
+        ...commonFields,
+        payload: context.payload as WorkflowRunEvent,
+        entityNumber: (context.payload as WorkflowRunEvent).workflow_run.id,
+        isPR: false,
+      };
+    }
     default:
       throw new Error(`Unsupported event type: ${context.eventName}`);
   }
@@ -157,4 +167,10 @@ export function isIssuesAssignedEvent(
   context: ParsedGitHubContext,
 ): context is ParsedGitHubContext & { payload: IssuesAssignedEvent } {
   return isIssuesEvent(context) && context.eventAction === "assigned";
+}
+
+export function isWorkflowRunEvent(
+  context: ParsedGitHubContext,
+): context is ParsedGitHubContext & { payload: WorkflowRunEvent } {
+  return context.eventName === "workflow_run";
 }
