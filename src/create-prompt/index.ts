@@ -16,6 +16,7 @@ import {
   isIssueCommentEvent,
   isPullRequestReviewEvent,
   isPullRequestReviewCommentEvent,
+  isWorkflowRunEvent,
 } from "../github/context";
 import type { ParsedGitHubContext } from "../github/context";
 import type { CommonFields, PreparedContext, EventData } from "./types";
@@ -110,6 +111,8 @@ export function prepareContext(
     triggerUsername = context.payload.comment.user.login;
   } else if (isIssuesEvent(context)) {
     triggerUsername = context.payload.issue.user.login;
+  } else if (isWorkflowRunEvent(context)) {
+    triggerUsername = context.payload.workflow_run.actor.login;
   }
 
   // Create infrastructure fields object
@@ -301,6 +304,15 @@ export function prepareContext(
       };
       break;
 
+    case "workflow_run":
+      eventData = {
+        eventName: "workflow_run",
+        eventAction: eventAction,
+        isPR: false,
+        workflowRunId: context.entityNumber.toString(),
+      };
+      break;
+
     default:
       throw new Error(`Unsupported event type: ${eventName}`);
   }
@@ -361,6 +373,14 @@ export function getEventTypeAndContext(envVars: PreparedContext): {
         triggerContext: eventData.eventAction
           ? `pull request ${eventData.eventAction}`
           : `pull request event`,
+      };
+
+    case "workflow_run":
+      return {
+        eventType: "WORKFLOW_RUN",
+        triggerContext: eventData.eventAction
+          ? `workflow run ${eventData.eventAction}`
+          : `workflow run event`,
       };
 
     default:

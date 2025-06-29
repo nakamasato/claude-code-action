@@ -66,7 +66,7 @@ async function run() {
     const branchInfo = await setupBranch(octokit, githubData, context);
 
     // Step 9: Update initial comment with branch link (only for issues that created a new branch)
-    if (branchInfo.claudeBranch) {
+    if (branchInfo.claudeBranch && commentId !== "skip") {
       await updateTrackingComment(
         octokit,
         context,
@@ -77,7 +77,9 @@ async function run() {
 
     // Step 10: Create prompt file
     await createPrompt(
-      commentId,
+      typeof commentId === "string" && commentId !== "skip"
+        ? parseInt(commentId, 10)
+        : 0,
       branchInfo.baseBranch,
       branchInfo.claudeBranch,
       githubData,

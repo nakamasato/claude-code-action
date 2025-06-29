@@ -9,6 +9,7 @@ import { appendFileSync } from "fs";
 import { createJobRunLink, createCommentBody } from "./common";
 import {
   isPullRequestReviewCommentEvent,
+  isWorkflowRunEvent,
   type ParsedGitHubContext,
 } from "../../context";
 import type { Octokit } from "@octokit/rest";
@@ -17,6 +18,14 @@ export async function createInitialComment(
   octokit: Octokit,
   context: ParsedGitHubContext,
 ) {
+  // Skip commenting for workflow_run events
+  if (isWorkflowRunEvent(context)) {
+    console.log("⏭️ Skipping comment creation for workflow_run event");
+    const githubOutput = process.env.GITHUB_OUTPUT!;
+    appendFileSync(githubOutput, `claude_comment_id=skip\n`);
+    return "skip";
+  }
+
   const { owner, repo } = context.repository;
 
   const jobRunLink = createJobRunLink(owner, repo, context.runId);
